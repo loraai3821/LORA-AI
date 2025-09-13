@@ -22,9 +22,9 @@ module.exports = {
     }
 
     // এখানে আপনার Google AI API Key দিন
-    const API_KEY = "AIzaSyCqx_34K1xV_R_4aoGxcEaEpYXiRKq2vfw"; 
+    const API_KEY = "AIzaSyC4qna4etecGWXRumSU6e3H8mifNCrxK0g"; 
 
-    if (API_KEY === "AIzaSyCqx_34K1xV_R_4aoGxcEaEpYXiRKq2vfw") {
+    if (API_KEY === "AIzaSyC4qna4etecGWXRumSU6e3H8mifNCrxK0g") {
       return api.sendMessage("❌| ত্রুটি: অনুগ্রহ করে কোডে 'YOUR_API_KEY' এর জায়গায় আপনার আসল API key বসান।", event.threadID, event.messageID);
     }
     
