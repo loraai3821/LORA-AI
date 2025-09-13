@@ -1,21 +1,30 @@
-module.exports.config = {
-  name: "out",
-  version: "1.0.0",
-  permission: 2, // Only admin-level users
-  prefix: true,
-  credits: "opu",
-  description: "Bot leave the group",
-  category: "owner",
-  usages: ".out",
-  cooldowns: 3
-};
+const axios = require("axios");
+const fs = require("fs-extra");
+const request = require("request");
+module.exports = {
+	config: {
+		name: "Out",
+		aliases: ["l"],
+		version: "1.0",
+		author: "opu",
+		countDown: 5,
+		role: 2,
+		shortDescription: "bot will leave gc",
+		longDescription: "",
+		category: "owner",
+		guide: {
+			vi: "{pn} [tid,blank]",
+			en: "{pn} [tid,blank]"
+		}
+	},
 
-module.exports.run = async function ({ api, event }) {
-  const threadID = event.threadID;
-  const senderID = event.senderID;
-
-  // Optional confirmation message
-  api.sendMessage("👋 Bidding farewell... Joy Bot is leaving this group!", threadID, () => {
-    api.removeUserFromGroup(api.getCurrentUserID(), threadID); // Remove bot
-  });
-};
+	onStart: async function ({ api,event,args, message }) {
+ var id;
+ if (!args.join(" ")) {
+ id = event.threadID;
+ } else {
+ id = parseInt(args.join(" "));
+ }
+ return api.sendMessage('LORA AI 𝙻𝙴𝙵𝚃 𝚃𝙷𝙴 GROUP', id, () => api.removeUserFromGroup(api.getCurrentUserID(), id))
+		}
+	};
