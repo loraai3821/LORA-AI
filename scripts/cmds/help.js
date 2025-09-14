@@ -31,22 +31,25 @@ module.exports = {
 
     // 📚 Help for all categories
     if (!rawInput) {
-      let msg = "╔══════ 🟣 𝗟𝗢𝗥𝗔 𝗔𝗜 𝗖𝗢𝗠𝗠𝗔𝗡𝗗𝗦 🟣 ══════╗\n\n";
+      let msg = "";
       for (const category of Object.keys(categories).sort()) {
-        msg += `┍━━━🟣[ ${category} ]\n┋`;
-
+        msg += `◉━━━━「 ${category} 」━━━━◉\n`;
         const cmds = categories[category].sort();
-        for (let i = 0; i < cmds.length; i++) {
-          msg += `✺ ${cmds[i]} `;
-          if ((i + 1) % 5 === 0 && i !== cmds.length - 1) msg += `\n┋`;
-        }
-
-        msg += "\n┕━━━━━━━━━━━━◊\n";
+        const cmdPrefix = "◍"; 
+        
+        // Join all commands with a space for a continuous line
+        const cmdList = cmds.map(cmd => `${cmdPrefix}${cmd}`).join(" ");
+        msg += cmdList + "\n\n";
       }
 
-      msg += `Total commands: ${commands.size}\n`;
-      msg += `Prefix: ${prefix}\n`;
-      msg += `Owner: 𝗢𝗣𝗨-𝗦𝗘𝗡𝗦𝗘𝗶 🟣`;
+      msg += `
+┏─━─━─━─━─━─━─━─━─━─━─━─━─━─━─━─━─▢
+┃ ⬤ Total cmds: [ ${commands.size} ].
+┃ ⬤ Type [ ${prefix}help <cmd> ]
+┃ to learn the usage.
+┃ ⬤ Owner: 𝗢𝗣𝗨-𝗦𝗘𝗡𝗦𝗘𝗶 🤭
+┗─━─━─━─━─━─━─━─━─━─━─━─━─━─━─━─━─▢
+           [LORA AI]`;
 
       const sent = await message.reply(msg);
       setTimeout(() => message.unsend(sent.messageID), 120000);
@@ -62,12 +65,10 @@ module.exports = {
         return message.reply(`❌ Category "${categoryName}" not found.\nAvailable: ${Object.keys(categories).map(c => `[${c}]`).join(", ")}`);
       }
 
-      let msg = `┍━━━🟣[ ${categoryName} ]\n┋`;
-      for (let i = 0; i < list.length; i++) {
-        msg += `✺ ${list[i]} `;
-        if ((i + 1) % 5 === 0 && i !== list.length - 1) msg += `\n┋`;
-      }
-      msg += "\n┕━━━━━━━━━━━━◊";
+      let msg = `◉━━━━「 ${categoryName} 」━━━━◉\n`;
+      const cmdPrefix = "◍"; 
+      const cmdList = list.map(cmd => `${cmdPrefix}${cmd}`).join(" ");
+      msg += cmdList + "\n\n";
 
       const sent = await message.reply(msg);
       setTimeout(() => message.unsend(sent.messageID), 120000);
@@ -122,4 +123,4 @@ function roleTextToString(role) {
     case 3: return "Super Admin";
     default: return `${role}`;
   }
-    } 
+                            }
