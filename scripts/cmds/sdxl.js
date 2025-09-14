@@ -4,14 +4,14 @@ const path = require("path");
 
 module.exports = {
   config: {
-    name: "sdxl",
-    aliases: ["sdxldraw", "sdxlpic", "sdxlart", "sdxlrender", "sdxlfusion"],
+    name: "poli2",
+    aliases: ["poligen"],
     version: "2.0",
     author: "opu-sense ",
     countDown: 10,
     role: 0,
-    shortDescription: "Generate images using SDXL",
-    longDescription: "Create AI-generated images with Stable Diffusion XL (SDXL). Supports multiple images, negative prompts, and custom sizes.",
+    shortDescription: "Generate images using poli",
+    longDescription: "Create AI-generated images with Pollination (ploi). Supports multiple images, negative prompts, and custom sizes.",
     category: "ai",
     guide: "{pn} <prompt> | --n <count> | --size <WxH> | --neg <negative prompt>"
   },
@@ -65,7 +65,7 @@ module.exports = {
       }
 
       api.sendMessage({
-        body: `✅ SDXL Image(s) Generated!\n📝 Prompt: ${prompt}`,
+        body: `✅ POLI Image(s) Generated!\n📝 Prompt: ${prompt}`,
         attachment: attachments
       }, event.threadID, () => {
         // Cleanup files
