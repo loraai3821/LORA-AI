@@ -1,15 +1,21 @@
 const axios = require('axios');
 const fs = require('fs');
+const path = require('path');
 const { createCanvas, loadImage } = require('canvas');
 
+/**
+ * Creates a 2x2 image grid from an array of 4 image URLs.
+ * @param {string[]} urls - An array of 4 image URLs.
+ * @returns {Promise<Buffer>} A Promise that resolves with the image buffer (JPEG).
+ */
 async function createImageGrid(urls) {
   const images = await Promise.all(urls.map(url => loadImage(url)));
   const maxWidth = Math.max(...images.map(img => img.width));
   const maxHeight = Math.max(...images.map(img => img.height));
-
   const canvas = createCanvas(maxWidth * 2, maxHeight * 2);
   const ctx = canvas.getContext('2d');
 
+  // Draw images in a 2x2 grid
   ctx.drawImage(images[0], 0, 0, maxWidth, maxHeight);
   ctx.drawImage(images[1], maxWidth, 0, maxWidth, maxHeight);
   ctx.drawImage(images[2], 0, maxHeight, maxWidth, maxHeight);
@@ -18,94 +24,131 @@ async function createImageGrid(urls) {
   return canvas.toBuffer('image/jpeg');
 }
 
-const baseApiUrl = async () => {
-  const base = await axios.get(`https://raw.githubusercontent.com/Mostakim0978/D1PT0/refs/heads/main/baseApiUrl.json`);
-  return base.data.api;
-};
-
 module.exports = {
   config: {
     name: "dalle",
     aliases: ["bing", "create", "imagine"],
-    version: "2.1",
-    author: "dipto | mod by Opu",
-    countDown: 15,
+    version: "2.2",
+    author: "dipto | mod by Opu & Gemini",
+    countDown: 25, // Increased countdown as AI generation can be slow
     role: 0,
-    description: "Génère une image DALL·E combinée avec sélection 1 à 4",
+    description: "Create 4 images using DALL·E and choose one.",
     category: "ai",
-    guide: { en: "{pn} [prompt]" }
+    guide: {
+      en: "{pn} a futuristic robot cat DJ in Tokyo"
+    }
   },
 
   onStart: async function ({ api, event, args }) {
     const prompt = (event.messageReply?.body.split("dalle")[1] || args.join(" ")).trim();
-    if (!prompt) return api.sendMessage("❌ Fournis un prompt.\n✅ Exemple: /dalle a futuristic robot cat DJ in Tokyo", event.threadID, event.messageID);
+    if (!prompt) {
+      return api.sendMessage("❌ Please provide a prompt.\n✅ Example: /dalle a cat wearing sunglasses", event.threadID, event.messageID);
+    }
 
-    const wait = await api.sendMessage("⏳ Génération des images...", event.threadID);
-
+    let waitMessage;
     try {
-      const response = await axios.get(`${await baseApiUrl()}/dalle?prompt=${encodeURIComponent(prompt)}&key=dipto008`);
-      const imageUrls = response.data.imgUrls || [];
+      waitMessage = await api.sendMessage("⏳ Your image is being created, please wait...", event.threadID);
 
+      // API URL is used directly for stability
+      const apiUrl = `https://www.noobs-api.000.pe/dalle?prompt=${encodeURIComponent(prompt)}&key=dipto008`;
+      
+      const response = await axios.get(apiUrl, { timeout: 60000 }); // 60-second timeout
+
+      if (!response.data || !Array.isArray(response.data.imgUrls) || response.data.imgUrls.length === 0) {
+        await api.unsendMessage(waitMessage.messageID);
+        return api.sendMessage("❌ Sorry, no images were received from the API. Please try again later.", event.threadID);
+      }
+
+      const imageUrls = response.data.imgUrls;
       if (imageUrls.length < 4) {
-        await api.unsendMessage(wait.messageID);
-        return api.sendMessage("❌ Pas assez d'images générées (minimum 4 requises).", event.threadID);
+        await api.unsendMessage(waitMessage.messageID);
+        return api.sendMessage(`❌ Sorry, only ${imageUrls.length} image(s) could be created. 4 are needed to create a grid.`, event.threadID);
       }
 
       const gridBuffer = await createImageGrid(imageUrls.slice(0, 4));
-      const gridPath = `dalle_grid_${event.threadID}.jpg`;
+
+      // Save the file in the cache folder
+      const cacheDir = path.join(__dirname, 'cache');
+      if (!fs.existsSync(cacheDir)) {
+        fs.mkdirSync(cacheDir);
+      }
+      const gridPath = path.join(cacheDir, `dalle_grid_${Date.now()}.jpg`);
       fs.writeFileSync(gridPath, gridBuffer);
 
       const msg = await api.sendMessage({
-        body: "✅ Voici les 4 variantes.\nRéponds avec 1, 2, 3 ou 4 pour choisir une version.",
+        body: "✅ Here are the 4 images.\nReply with 1, 2, 3, or 4 to get your chosen image.",
         attachment: fs.createReadStream(gridPath)
       }, event.threadID);
 
+      await api.unsendMessage(waitMessage.messageID);
+
       global.GoatBot.onReply.set(msg.messageID, {
-        commandName: "dalle",
+        commandName: this.config.name,
         author: event.senderID,
+        messageID: msg.messageID,
         imageUrls
       });
 
-      setTimeout(() => fs.unlink(gridPath, () => {}), 60000);
-      await api.unsendMessage(wait.messageID);
+      // Timer to delete the file
+      setTimeout(() => {
+        if (fs.existsSync(gridPath)) {
+          fs.unlink(gridPath, (err) => {
+            if (err) console.error("Error deleting grid file:", err);
+          });
+        }
+      }, 60000); // Deletes after 60 seconds
 
     } catch (error) {
-      console.error(error);
-      await api.unsendMessage(wait.messageID);
-      api.sendMessage(`❌ Erreur : ${error.message}`, event.threadID);
+      if (waitMessage) await api.unsendMessage(waitMessage.messageID);
+      console.error("DALL-E Command Error:", error);
+      let errorMessage = "❌ An unknown error occurred while creating the image.";
+      if (error.response) {
+        errorMessage = "❌ An error occurred from the image generation service. Please try again later.";
+      } else if (error.code === 'ECONNABORTED') {
+        errorMessage = "❌ Connection to the image generation server timed out. Please try again later.";
+      }
+      api.sendMessage(errorMessage, event.threadID);
     }
   },
 
   onReply: async function ({ api, event, Reply }) {
-    const { author, imageUrls } = Reply;
-    if (event.senderID !== author) return;
+    if (event.senderID !== Reply.author) return;
 
     const choice = event.body.trim();
     if (!["1", "2", "3", "4"].includes(choice)) {
-      return api.sendMessage("❌ Choix invalide. Réponds avec 1, 2, 3 ou 4.", event.threadID);
+      return api.sendMessage("❌ Invalid input. Please reply with 1, 2, 3, or 4.", event.threadID);
     }
 
-    const index = parseInt(choice) - 1;
-    const url = imageUrls[index];
-    const path = `dalle_selected_${choice}_${event.threadID}.jpg`;
-
+    // Deactivate the reply handler after one use
+    global.GoatBot.onReply.delete(Reply.messageID);
+    let waitReply;
     try {
-      const res = await axios.get(url, { responseType: 'stream' });
-      const writer = fs.createWriteStream(path);
+      waitReply = await api.sendMessage("⏳ Downloading your selected image...", event.threadID);
+      const index = parseInt(choice) - 1;
+      const url = Reply.imageUrls[index];
 
-      res.data.pipe(writer);
-      writer.on('finish', () => {
-        api.sendMessage({
-          body: `🖼 Voici la version ${choice}`,
-          attachment: fs.createReadStream(path)
-        }, event.threadID, () => {
-          fs.unlink(path, () => {});
+      const imageResponse = await axios.get(url, { responseType: 'arraybuffer' });
+      const cacheDir = path.join(__dirname, 'cache');
+      const selectedPath = path.join(cacheDir, `dalle_selected_${Date.now()}.jpg`);
+      fs.writeFileSync(selectedPath, imageResponse.data);
+
+      await api.sendMessage({
+        body: `🖼️ Here is your selected version ${choice}.`,
+        attachment: fs.createReadStream(selectedPath)
+      }, event.threadID);
+
+      await api.unsendMessage(waitReply.messageID);
+      
+      // Delete the file after use
+      if (fs.existsSync(selectedPath)) {
+        fs.unlink(selectedPath, (err) => {
+          if (err) console.error("Error deleting selected image file:", err);
         });
-      });
-
+      }
     } catch (err) {
-      console.error(err);
-      api.sendMessage("❌ Impossible de récupérer l'image.", event.threadID);
+      if (waitReply) await api.unsendMessage(waitReply.messageID);
+      console.error("DALL-E Reply Error:", err);
+      api.sendMessage("❌ Failed to download the selected image.", event.threadID);
     }
   }
 };
