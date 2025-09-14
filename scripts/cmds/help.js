@@ -49,7 +49,8 @@ module.exports = {
 ┃ to learn the usage.
 ┃ ⬤ Owner: 𝗢𝗣𝗨-𝗦𝗘𝗡𝗦𝗘𝗶 🤭
 ┗─━─━─━─━─━─━─━─━─━─━─━─━─━─━─━─━─▢
-           [LORA AI]`;
+          
+           [ LORA AI ]`;
 
       const sent = await message.reply(msg);
       setTimeout(() => message.unsend(sent.messageID), 120000);
