@@ -4,7 +4,7 @@ odule.exports.config = {
   description: "Autopost garden tracker with user scores, bonuses, free trial shop, premium shop, and on/off/claim/status/buy commands",
   usage: "autopost on/off/score/claim [code]/status/buy [number]/trial [number]",
   role: 0,
-  author: 'Prince'
+  author: 'Prince',
   category: "utility"
 };
 
