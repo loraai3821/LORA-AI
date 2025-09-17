@@ -1,23 +1,21 @@
-odule.exports.config = {
+module.exports.config = {
   name: "autopost",
-  version: "2.7.0",
-  description: "Autopost garden tracker with user scores, bonuses, free trial shop, premium shop, and on/off/claim/status/buy commands",
-  usage: "autopost on/off/score/claim [code]/status/buy [number]/trial [number]",
+  version: "3.0.0",
+  description: "Autopost garden tracker with user scores, claim, shop, premium, trial and leaderboard system",
+  usage: "autopost on/off/score/claim/status/buy [number]/trial [number]/shop",
   role: 0,
-  author: 'Prince',
+  author: 'Prince | Fixed by OPU',
   category: "utility"
 };
 
 let autoPostInterval = null;
-let activeUsers = new Set(); // Set of active user IDs
-let userScores = {}; // Simple in-memory storage for user scores
-let userNames = {}; // Cache for user names
-let userPremiumStatus = {}; // Tracks if user is premium
+let activeUsers = new Set();
+let userScores = {};
+let userNames = {};
+let userPremiumStatus = {};
 
-// Sample free trial users (simulate 5 users)
-const freeTrialUsers = new Set(); // will store userIds of free trial users
+const freeTrialUsers = new Set();
 
-// Free trial shop items (5 items)
 const freeTrialShop = [
   { id: 1, name: "Basic Seed Pack", emoji: "🌱", price: 0 },
   { id: 2, name: "Simple Tool", emoji: "🛠️", price: 0 },
@@ -26,7 +24,6 @@ const freeTrialShop = [
   { id: 5, name: "Free Cosmetic", emoji: "🎨", price: 0 }
 ];
 
-// Sample premium shop items (6 items with emojis)
 const premiumShop = [
   { id: 1, name: "Golden Trowel", emoji: "🛠️", price: 1500 },
   { id: 2, name: "Diamond Watering Can", emoji: "🚿", price: 2000 },
@@ -36,117 +33,128 @@ const premiumShop = [
   { id: 6, name: "Premium Garden Statue", emoji: "🗿", price: 3000 }
 ];
 
-module.exports.onStart = async function({ api, event, usersData }) {
-  const args = event.body.slice(9).trim().split(' ');
+module.exports.onStart = async function ({ api, event, usersData }) {
+  const args = event.body.split(" ").slice(1);
   const action = args[0];
-  const replyToId = event.messageID;
   const userId = event.senderID;
+  const threadID = event.threadID;
+  const messageID = event.messageID;
 
-  // Helper to get user name
   async function getUserName(id) {
     if (!userNames[id]) {
       try {
         const userInfo = await api.getUserInfo(id);
         userNames[id] = userInfo[id].name;
       } catch {
-        userNames[id] = 'Unknown';
+        userNames[id] = "Unknown";
       }
     }
     return userNames[id];
   }
 
-  if (action === 'on') {
-    if (autoPostInterval) {
-      api.sendMessage('Autopost is already running!', event.threadID, replyToId);
-      return;
-    }
-    // Add user to active if not already
-    if (!activeUsers.has(userId)) {
-      await getUserName(userId);
-      activeUsers.add(userId);
-      if (!userScores[userId]) userScores[userId] = 0;
-    }
+  // ON command
+  if (action === "on") {
+    if (autoPostInterval) return api.sendMessage("⚠️ Autopost already running!", threadID, messageID);
+
+    await getUserName(userId);
+    activeUsers.add(userId);
+    if (!userScores[userId]) userScores[userId] = 0;
 
     autoPostInterval = setInterval(async () => {
-      // Sample gear
-      const gear = [
-        '- Trading Ticket: x1',
-        '- 🧴 Cleaning Spray: x1',
-        '- 🛠️ Trowel: x3',
-        '- 🔧 Recall Wrench: x3',
-        '- 🚿 Watering Can: x3',
-        '- ❤️ Favorite Tool: x2',
-        '- 💧 Basic Sprinkler: x3',
-        '- 🌾 Harvest Tool: x1'
-      ];
-
-      // Base seeds (random selection)
       const baseSeeds = [
-        '- 🥕 Carrot: x14',
-        '- 🍇 Grape: x1',
-        '- 🍓 Strawberry: x5',
-        '- 🌷 Orange Tulip: x24',
-        '- 🍅 Tomato: x3',
-        '- 🫐 Blueberry: x5',
-        '- 🍎 Apple: x10',
-        '- 🍌 Banana: x20'
+        "- 🥕 Carrot: x14",
+        "- 🍇 Grape: x1",
+        "- 🍓 Strawberry: x5",
+        "- 🌷 Orange Tulip: x24",
+        "- 🍅 Tomato: x3",
+        "- 🫐 Blueberry: x5",
+        "- 🍎 Apple: x10",
+        "- 🍌 Banana: x20"
       ];
-      const shuffledSeeds = baseSeeds.sort(() => 0.5 - Math.random());
-      const selectedSeeds = shuffledSeeds.slice(0, 6);
+      const selectedSeeds = baseSeeds.sort(() => 0.5 - Math.random()).slice(0, 5);
 
-      // Eggs
-      const eggs = [
-        '- 🥚 Common Egg: x1',
-        '- 🥚 Common Egg: x1',
-        '- 🥚 Common Egg: x1'
-      ];
-
-      // Cosmetics
-      const cosmetics = [
-        '- Beach Crate: x2',
-        '- Cabana: x1',
-        '- Compost Bin: x1',
-        '- Torch: x1',
-        '- Long Stone Table: x1',
-        '- Rock Pile: x1',
-        '- Small Circle Tile: x5',
-        '- Large Wood Table: x1',
-        '- Bookshelf: x1'
-      ];
-
-      // Honey
-      const honey = [
-        '- Corrupt Radar: x1',
-        '- Zen Seed Pack: x1',
-        '- Sakura Bush: x1',
-        '- Zenflare: x2',
-        '- Tranquil Radar: x2'
-      ];
-
-      // Weather
-      const weather = '⚡ Thunderstorm\n📋 Thunderstorm - Ends: 14:42 - Duration: 3 minutes\n+50% Grow Speed! Higher SHOCKED Fruit Chance!\n🎯 +50% growth; same Wet chance';
-
-      // Calculate top user and average
       let topUser = null;
       let maxScore = 0;
-      let totalScore = 0;
-      let count = 0;
-      let winnerAnnouncement = '';
       for (const id of activeUsers) {
-        const score = userScores[id] || 0;
-        totalScore += score;
-        count++;
-        if (score > maxScore) {
-          maxScore = score;
-          topUser = userNames[id] || 'Unknown';
+        if ((userScores[id] || 0) > maxScore) {
+          maxScore = userScores[id];
+          topUser = await getUserName(id);
         }
       }
-      const averageScore = count > 0 ? (totalScore / count).toFixed(2) : 0;
-      const averagePercent = count > 0 ? ((totalScore / (count * 100)) * 100).toFixed(2) + '%' : '0%'; // Assuming max score is 100 for percent
 
-      // Check for winner award
-      if (maxScore >= 23000) {
-        const topUserId = Array.from(activeUsers).find(id => userNames[id] === topUser);
-        if (topUserId) {
-          const userData = await usersData.get(topUserId) || { money: 0 };
-          const newMoney = (userD
+      api.sendMessage(
+        `🌱 Garden Update 🌱\n${selectedSeeds.join("\n")}\n\n👑 Top User: ${topUser || "None"} (${maxScore})`,
+        threadID
+      );
+    }, 60000);
+
+    return api.sendMessage("✅ Autopost started!", threadID, messageID);
+  }
+
+  // OFF command
+  if (action === "off") {
+    if (autoPostInterval) {
+      clearInterval(autoPostInterval);
+      autoPostInterval = null;
+      return api.sendMessage("❌ Autopost stopped!", threadID, messageID);
+    } else return api.sendMessage("⚠️ Autopost not running!", threadID, messageID);
+  }
+
+  // SCORE command
+  if (action === "score") {
+    const score = userScores[userId] || 0;
+    return api.sendMessage(`📊 Your Score: ${score}`, threadID, messageID);
+  }
+
+  // CLAIM command
+  if (action === "claim") {
+    const reward = Math.floor(Math.random() * 500) + 100;
+    userScores[userId] = (userScores[userId] || 0) + reward;
+
+    const userData = await usersData.get(userId) || { money: 0 };
+    const newMoney = (userData.money || 0) + reward;
+    await usersData.set(userId, { money: newMoney });
+
+    return api.sendMessage(`🎁 You claimed ${reward} coins!\n💰 Balance updated.`, threadID, messageID);
+  }
+
+  // STATUS command
+  if (action === "status") {
+    const score = userScores[userId] || 0;
+    const premium = userPremiumStatus[userId] ? "✅ Yes" : "❌ No";
+    return api.sendMessage(`📊 Status:\n⭐ Score: ${score}\n👑 Premium: ${premium}`, threadID, messageID);
+  }
+
+  // SHOP command
+  if (action === "shop") {
+    let shopMsg = "🛒 Premium Shop:\n";
+    premiumShop.forEach(item => {
+      shopMsg += `${item.id}. ${item.emoji} ${item.name} - ${item.price} coins\n`;
+    });
+    return api.sendMessage(shopMsg, threadID, messageID);
+  }
+
+  // BUY command
+  if (action === "buy") {
+    const itemId = parseInt(args[1]);
+    if (!itemId || !premiumShop.find(i => i.id === itemId))
+      return api.sendMessage("⚠️ Invalid item ID!", threadID, messageID);
+
+    const item = premiumShop.find(i => i.id === itemId);
+    const userData = await usersData.get(userId) || { money: 0 };
+    if ((userData.money || 0) < item.price)
+      return api.sendMessage("❌ Not enough coins!", threadID, messageID);
+
+    await usersData.set(userId, { money: (userData.money || 0) - item.price });
+    return api.sendMessage(`✅ You bought ${item.emoji} ${item.name}!`, threadID, messageID);
+  }
+
+  // TRIAL command
+  if (action === "trial") {
+    if (freeTrialUsers.has(userId))
+      return api.sendMessage("⚠️ You already used free trial!", threadID, messageID);
+
+    freeTrialUsers.add(userId);
+    return api.sendMessage("🎉 Free trial activated! Enjoy premium benefits for 24h.", threadID, messageID);
+  }
+};
