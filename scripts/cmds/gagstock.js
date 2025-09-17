@@ -10,7 +10,7 @@ let sharedWebSocket = null;
 let keepAliveInterval = null;
 let connecting = false;
 
-// Utility functions (same as before)
+// Utility functions
 function formatValue(val) {
   if (val >= 1_000_000) return `x${(val / 1_000_000).toFixed(1)}M`;
   if (val >= 1_000) return `x${(val / 1_000).toFixed(1)}K`;
@@ -21,36 +21,12 @@ function getPHTime() {
   return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }));
 }
 
-function getTimeAgo(date) {
-  if (!date) return "Unknown";
-  const now = getPHTime();
-  const diff = now - new Date(date);
-  const sec = Math.floor(diff / 1000);
-  const min = Math.floor(sec / 60);
-  const hour = Math.floor(min / 60);
-  const day = Math.floor(hour / 24);
-
-  if (sec < 60) return `${sec}s ago`;
-  if (min < 60) return `${min}m ago`;
-  if (hour < 24) return `${hour}h ago`;
-  return `${day}d ago`;
-}
-
 function cleanText(text) {
   if (!text) return "";
   return String(text).trim().toLowerCase();
 }
 
-function safeJsonStringify(obj) {
-  try {
-    return JSON.stringify(obj);
-  } catch {
-    return String(obj);
-  }
-}
-
-// WebSocket connect
-function ensureWebSocketConnection(message) {
+function ensureWebSocketConnection() {
   if (connecting) return;
   if (sharedWebSocket && sharedWebSocket.readyState === WebSocket.OPEN) return;
 
@@ -65,7 +41,7 @@ function ensureWebSocketConnection(message) {
         if (sharedWebSocket && sharedWebSocket.readyState === WebSocket.OPEN) {
           sharedWebSocket.send("ping");
         }
-      } catch (err) {}
+      } catch {}
     }, 10000);
     console.log("[gagstock] websocket opened");
   });
@@ -90,14 +66,14 @@ module.exports = {
     countDown: 5,
     role: 0,
     shortDescription: "Track Grow A Garden stock",
-    category: "tools",
+    category: "game",
     guide: {
       en: "gagstock on | gagstock off | gagstock fav add <item> | gagstock lastseen | gagstock predict"
     }
   },
 
-  onStart: async function ({ message, args, event }) {
-    const senderId = event.senderID;
+  onStart: async function({ message, args }) {
+    const senderId = message.senderID;
     const subcmd = args[0]?.toLowerCase();
 
     if (subcmd === "off") {
@@ -135,13 +111,13 @@ module.exports = {
     }
 
     if (subcmd === "lastseen") {
-      return message.reply("📦 Last Seen feature is not fully implemented yet.");
+      return message.reply("📦 Last Seen feature not implemented yet.");
     }
 
     if (subcmd === "predict") {
-      return message.reply("🔮 Predict feature is not fully implemented yet.");
+      return message.reply("🔮 Predict feature not implemented yet.");
     }
 
     return message.reply("📌 Usage:\n• gagstock on\n• gagstock off\n• gagstock fav add Carrot | Watering Can\n• gagstock lastseen\n• gagstock predict");
   }
-}; 
+};
