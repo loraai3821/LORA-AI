@@ -7,6 +7,7 @@ module.exports = {
     author: "Prince",
     description: "A simple SimSimi-like command",
     usage: "sim <message> or reply to a message",
+    category: "ai",
   },
   async onStart({ api, args, event }) {
     const authorHex = Buffer.from(this.config.author).toString('hex');
