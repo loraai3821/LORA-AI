@@ -3,7 +3,7 @@ module.exports = {
     name: "balance",
     aliases: ["bal"],
     version: "1.9",
-    author: "♡︎ 𝐻𝐴𝑆𝐴𝑁 ♡︎",
+    author: "OPU SENSEI",
     countDown: 5,
     role: 0,
     description: {
@@ -20,7 +20,7 @@ module.exports = {
         "\n {pn} shop: view protection shop 🛒" +
         "\n {pn} buy [number]: buy protection 🛡️" +
         "\n {pn} status: check your protection status 🛡️" +
-        "\n {pn} rob @mention or reply to message: rob someone (for testing) 💰" +
+        "\n {pn} rob @mention or reply to message: rob someone 💰" +
         "\n {pn} stalk (reply to message): stalk user info 🔍" +
         "\n {pn} help: view all commands 📋"
     }
@@ -63,37 +63,33 @@ module.exports = {
       isSelfCheck = false;
     }
 
-    // Handle send/request commands
+    // Send/Request
     if (args.length > 0 && (args[0] === "send" || args[0] === "request")) {
       return await this.handleTransaction({ message, usersData, event, args, api });
     }
 
-    // Handle claim command for free coins
+    // Claim Coins
     if (args.length > 0 && args[0].toLowerCase() === "claim") {
       const code = args[1];
-      if (!code) {
-        return api.sendMessage(
-          "❌ | Please provide a claim code. Usage: {pn} claim [code]",
-          event.threadID
-        );
-      }
+      if (!code) return api.sendMessage("❌ | Please provide a claim code.", event.threadID);
+
       if (code.toUpperCase() === "3SQ48") {
         const userData = await usersData.get(event.senderID) || {};
         const now = Date.now();
         const lastClaim = userData.lastClaimCodeTime || 0;
-        const cooldown = 24 * 60 * 60 * 1000; // 24 hours
+        const cooldown = 24 * 60 * 60 * 1000;
 
         if (userData.claimedCodes?.includes("3SQ48") && (now - lastClaim) < cooldown) {
           const remainingMs = cooldown - (now - lastClaim);
           const remainingHours = Math.floor(remainingMs / (60 * 60 * 1000));
           const remainingMinutes = Math.floor((remainingMs % (60 * 60 * 1000)) / (60 * 1000));
           return api.sendMessage(
-            `❌ | You have already claimed this code. Please wait ${remainingHours} hour(s) and ${remainingMinutes} minute(s) before claiming again.`,
+            `❌ | Already claimed. Wait ${remainingHours}h ${remainingMinutes}m.`,
             event.threadID
           );
         }
 
-        const freeCoins = 66000000; // 66 Million
+        const freeCoins = 66000000;
         const newMoney = (userData.money || 0) + freeCoins;
         const claimedCodes = userData.claimedCodes || [];
         if (!claimedCodes.includes("3SQ48")) claimedCodes.push("3SQ48");
@@ -101,25 +97,42 @@ module.exports = {
         await usersData.set(event.senderID, {
           ...userData,
           money: newMoney,
-          claimedCodes: claimedCodes,
+          claimedCodes,
           lastClaimCodeTime: now
         });
 
         return api.sendMessage(
-          `🎉 | Congratulations! You have claimed ${this.formatMoney(freeCoins)} free coins! Your new balance is ${this.formatMoney(newMoney)} $ 🤑`,
+          `🎉 | Claimed ${this.formatMoney(freeCoins)}! New balance: ${this.formatMoney(newMoney)} $ 🤑`,
           event.threadID
         );
       } else {
-        return api.sendMessage(
-          "❌ | Invalid claim code.",
-          event.threadID
-        );
+        return api.sendMessage("❌ | Invalid claim code.", event.threadID);
       }
     }
 
-    // Handle stalk command
+    // Stalk Command
     if (args.length > 0 && args[0].toLowerCase() === "stalk") {
       if (!event.messageReply) {
-        return api.sendMessage("❌ | Reply to a message to stalk the user.", event.threadID);
+        return api.sendMessage("❌ | Reply to a message to stalk.", event.threadID);
       }
-      const stalkUserID = event.
+      const stalkUserID = event.messageReply.senderID;
+      const userInfo = await usersData.get(stalkUserID) || {};
+      return api.sendMessage(
+        `🔍 | Stalked User Info:\n` +
+        `👤 ID: ${stalkUserID}\n` +
+        `💰 Balance: ${this.formatMoney(userInfo.money || 0)}\n` +
+        `🛡️ Protections: ${userInfo.protections ? userInfo.protections.join(", ") : "None"}`,
+        event.threadID
+      );
+    }
+
+    // Default: Show Balance
+    const userData = await usersData.get(targetUserID) || {};
+    const balance = this.formatMoney(userData.money || 0);
+    return api.sendMessage(
+      `${isSelfCheck ? "💰 | Your balance" : "💰 | User balance"}: ${balance} $`,
+      event.threadID,
+      event.messageID
+    );
+  }
+};
